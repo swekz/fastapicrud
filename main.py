@@ -1,5 +1,4 @@
 from bson import ObjectId
-from flask import Flask, jsonify
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from pymongo import MongoClient
@@ -8,39 +7,43 @@ from hashlib import sha256
 
 import uvicorn
 
-app = Flask(__name__)
 # Initialize FastAPI app
 app = FastAPI()
 
 # Database configuration
-client = MongoClient("mongodb://localhost:27017/")
-db = client["remotebricks"]
-users_collection = db["users"]
-anothers_collection = db["details"]
+client = MongoClient("mongodb://localhost:27017/")   #--database connection
+db = client["remotebricks"]          #--database name
+users_collection = db["users"]        #--collection name
+anothers_collection = db["details"]   #--collection name
 
 # Utility function to hash passwords
 def hash_password(password: str) -> str:
     return sha256(password.encode()).hexdigest()
 
 # Data models
+#-----for registration----
 class UserRegistration(BaseModel):
     username : str
     email: str
     password: str
 
+#--------for login-------
 class UserLogin(BaseModel):
     email: str
     password: str
 
+#--------for linking id------
 class LinkID(BaseModel):
     user_id: str
     linked_id: str
 
+#-------to add details in multiple collection--
 class Details(BaseModel):
     age: int
     user_id: str
     location: str
 
+#-----------delete user
 class Deletedata(BaseModel):
     user_id: str
 
@@ -50,7 +53,7 @@ def serialize_object_id(obj):
     raise TypeError("Type not serializable")
 
 # API Endpoints
-
+#--------registration of users---------------
 @app.post("/register")
 async def register(user: UserRegistration):
     # Check if user already exists
@@ -69,6 +72,7 @@ async def register(user: UserRegistration):
     })
     return {"message": "User registered successfully"}
 
+#------------------Login endpoint--------------------
 @app.post("/login")
 async def login(user: UserLogin):
     # Verify user credentials
@@ -79,6 +83,7 @@ async def login(user: UserLogin):
         return {"message":"Password mismatch"}
     return {"message": "Login successful"}
 
+#-------------------link id endpoint------------------
 @app.post("/link-id")
 async def link_id(link_id: LinkID):
     # Convert string user_id to ObjectId
@@ -103,6 +108,7 @@ async def link_id(link_id: LinkID):
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid User ID format")
 
+#-----------------add details of users with _id and save in different collection------------
 @app.post("/add_details")
 async def details(data : Details):
     try:
@@ -126,6 +132,7 @@ async def details(data : Details):
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid User ID format")
 
+#---------------------delete users and their data from all collections----
 @app.delete("/delete_user")
 async def delete_user(user_id: Deletedata):
     try:
@@ -162,6 +169,7 @@ async def delete_user(user_id: Deletedata):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error occurred: {str(e)}")
 
+#-----------join data of multiple collections --------------------------------
 @app.get("/join")
 async def get_user_orders():
 
@@ -178,7 +186,6 @@ async def get_user_orders():
     except Exception as e:
         # logging.error(f"Error in join_collections: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1",port=4000, reload=True)
