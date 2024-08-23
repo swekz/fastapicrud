@@ -73,8 +73,10 @@ async def register(user: UserRegistration):
 async def login(user: UserLogin):
     # Verify user credentials
     user_data = users_collection.find_one({"email": user.email})
+    if not user_data:
+        return {"message": "signup before login"}
     if not user_data or user_data["password"] != hash_password(user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        return {"message":"Password mismatch"}
     return {"message": "Login successful"}
 
 @app.post("/link-id")
